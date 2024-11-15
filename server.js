@@ -1,26 +1,37 @@
+const http = require("http");
 const { Server } = require("socket.io");
 
+// Create an HTTP server
+const httpServer = http.createServer((req, res) => {
+    if (req.url === "/") {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("Socket.IO server is running!");
+    } else {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Page not found");
+    }
+});
 
-const io = new Server(3000, {
+// Create a Socket.IO server
+const io = new Server(httpServer, {
     cors: {
-        origin: "*", 
+        origin: "*", // Adjust in production
         methods: ["GET", "POST"],
     },
 });
 
+// In-memory store for users
 const users = {};
 
-
+// Handle connection
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-
     socket.on("register", ({ userId }) => {
         console.log(`User registered: ${userId}`);
-        users[userId] = socket.id; // Map userId to socket.id
+        users[userId] = socket.id;
         socket.emit("registered", { userId });
     });
-
 
     socket.on("call-user", ({ from, to, offer }) => {
         console.log(`Call from ${from} to ${to}`);
@@ -32,7 +43,6 @@ io.on("connection", (socket) => {
         }
     });
 
-
     socket.on("answer-call", ({ to, answer }) => {
         console.log(`Answer from ${socket.id} to ${to}`);
         const targetSocketId = users[to];
@@ -40,7 +50,6 @@ io.on("connection", (socket) => {
             io.to(targetSocketId).emit("call-answered", { answer });
         }
     });
-
 
     socket.on("ice-candidate", ({ to, candidate }) => {
         console.log(`ICE candidate from ${socket.id} to ${to}`);
@@ -61,4 +70,8 @@ io.on("connection", (socket) => {
     });
 });
 
-console.log("Socket.IO signaling server running on port 3000");
+// Start the HTTP server on port 3000
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
