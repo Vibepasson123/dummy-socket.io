@@ -59,6 +59,15 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("send-message", ({ from, to, message }) => {
+        const targetSocketId = users[to];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("new-message", { from, message });
+        } else {
+            console.log(`User ${to} not connected.`);
+        }
+    });
+
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
         for (const [userId, socketId] of Object.entries(users)) {
