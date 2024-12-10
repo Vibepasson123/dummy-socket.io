@@ -1,7 +1,6 @@
 const http = require("http");
 const { Server } = require("socket.io");
 
-// Create an HTTP server
 const httpServer = http.createServer((req, res) => {
     if (req.url === "/") {
         res.writeHead(200, { "Content-Type": "text/plain" });
@@ -12,29 +11,34 @@ const httpServer = http.createServer((req, res) => {
     }
 });
 
-// Create a Socket.IO server
+
 const io = new Server(httpServer, {
     cors: {
-        origin: "*", // Adjust in production
+        origin: "*",
         methods: ["GET", "POST"],
     },
 });
 
-// In-memory store for users
-const users = {};
 
-// Handle connection
+const users = {};
+const liveUsers = [];
+
+
+
 io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
 
     socket.on("register", ({ userId }) => {
         console.log(`User registered: ${userId}`);
         users[userId] = socket.id;
+        if (!liveUsers.includes(userId)) {
+            liveUsers.push(userId);
+        }
         socket.emit("registered", { userId });
+        socket.emit("live-users", { liveUsers });
+        socket.broadcast.emit("new-live-user", { userId });
     });
 
     socket.on("call-user", ({ from, to, offer }) => {
-        console.log(`Call from ${from} to ${to}`);
         const targetSocketId = users[to];
         if (targetSocketId) {
             io.to(targetSocketId).emit("incoming-call", { from, offer });
@@ -43,8 +47,8 @@ io.on("connection", (socket) => {
         }
     });
 
+
     socket.on("answer-call", ({ to, answer }) => {
-        console.log(`Answer from ${socket.id} to ${to}`);
         const targetSocketId = users[to];
         if (targetSocketId) {
             io.to(targetSocketId).emit("call-answered", { answer });
@@ -52,7 +56,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("ice-candidate", ({ to, candidate }) => {
-        console.log(`ICE candidate from ${socket.id} to ${to}`);
         const targetSocketId = users[to];
         if (targetSocketId) {
             io.to(targetSocketId).emit("ice-candidate", { candidate });
@@ -77,9 +80,27 @@ io.on("connection", (socket) => {
             }
         }
     });
+    socket.on("in-call", ({ from, to }) => {
+        [from, to].forEach((userId) => {
+            const liveIndex = liveUsers.indexOf(userId);
+            if (liveIndex !== -1) liveUsers.splice(liveIndex, 1);
+        });
+        io.emit("live-users", { liveUsers });
+    });
+    
+    socket.on("call-end", ({ from, to }) => {
+        [from, to].forEach((userId) => {
+            if (!liveUsers.includes(userId)) {
+                liveUsers.push(userId);
+            }
+        });
+        io.emit("live-users", { liveUsers });
+    });
+
+    
 });
 
-// Start the HTTP server on port 3000
+
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
