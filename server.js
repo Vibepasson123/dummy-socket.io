@@ -73,10 +73,20 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
+        let disconnectedUserId;
         for (const [userId, socketId] of Object.entries(users)) {
             if (socketId === socket.id) {
+                disconnectedUserId = userId;
                 delete users[userId];
                 break;
+            }
+        }
+
+        if (disconnectedUserId) {
+            const index = liveUsers.indexOf(disconnectedUserId);
+            if (index !== -1) {
+                liveUsers.splice(index, 1);
+                io.emit("live-users", { liveUsers });
             }
         }
     });
@@ -87,7 +97,7 @@ io.on("connection", (socket) => {
         });
         io.emit("live-users", { liveUsers });
     });
-    
+
     socket.on("call-end", ({ from, to }) => {
         [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
@@ -97,7 +107,7 @@ io.on("connection", (socket) => {
         io.emit("live-users", { liveUsers });
     });
 
-    
+
 });
 
 
