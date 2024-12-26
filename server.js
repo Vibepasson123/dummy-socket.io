@@ -107,7 +107,7 @@ io.on("connection", (socket) => {
         io.emit("live-users", { liveUsers });
     });
 
-    socket.on("disconnect", ({ from, to, name, complain }) => {
+    socket.on("disconnect-call", ({ from, to, name, complain }) => {
         [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
                 liveUsers.push(userId);
