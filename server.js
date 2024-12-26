@@ -114,7 +114,7 @@ io.on("connection", (socket) => {
                 liveUsers.push(userId);
             }
         });
-        io.to(targetSocketId).emit("call-disconnect", { name, complain });
+        io.to(targetSocketId).emit("call-disconnect", {from, to, name, complain });
 
     });
 
