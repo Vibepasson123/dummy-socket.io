@@ -108,13 +108,14 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect-call", ({ from, to, name, complain }) => {
+        const targetSocketId = users[to];
         [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
                 liveUsers.push(userId);
             }
         });
-        io.to(to).emit("call-disconnect", { name, complain });
-        io.emit("live-users", { liveUsers });
+        io.to(targetSocketId).emit("call-disconnect", { name, complain });
+
     });
 
 });
