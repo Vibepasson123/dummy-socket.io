@@ -107,6 +107,15 @@ io.on("connection", (socket) => {
         io.emit("live-users", { liveUsers });
     });
 
+    socket.on("disconnect", ({ from, to, name, complain }) => {
+        [from, to].forEach((userId) => {
+            if (!liveUsers.includes(userId)) {
+                liveUsers.push(userId);
+            }
+        });
+        io.to(to).emit("call-disconnect", { name, complain });
+        io.emit("live-users", { liveUsers });
+    });
 
 });
 
