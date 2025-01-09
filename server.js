@@ -36,6 +36,7 @@ io.on("connection", (socket) => {
         }
         socket.emit("registered", { userId });
         io.emit("live-users", { liveUsers });
+        io.emit("call-users", { callUsers }); 
         socket.broadcast.emit("new-live-user", { userId });
     });
 
