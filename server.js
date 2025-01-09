@@ -22,6 +22,7 @@ const io = new Server(httpServer, {
 
 const users = {};
 const liveUsers = [];
+const callUsers = [];
 
 
 
@@ -42,6 +43,11 @@ io.on("connection", (socket) => {
         const targetSocketId = users[to];
         if (targetSocketId) {
             io.to(targetSocketId).emit("incoming-call", { from, offer });
+            if (!callUsers.includes(from)) callUsers.push(from);
+            if (!callUsers.includes(to)) callUsers.push(to);
+
+            console.log("Users in call:", callUsers);
+            io.emit("call-users", { callUsers }); 
         } else {
             socket.emit("user-not-found", { to });
         }
@@ -96,9 +102,21 @@ io.on("connection", (socket) => {
             if (liveIndex !== -1) liveUsers.splice(liveIndex, 1);
         });
         io.emit("live-users", { liveUsers });
+        if (callIndex !== -1) {
+            callUsers.splice(callIndex, 1);
+            console.log("Updated callUsers after disconnect:", callUsers);
+            io.emit("call-users", { callUsers });
+        }
     });
 
     socket.on("call-end", ({ from, to }) => {
+        [from, to].forEach((userId) => {
+            const index = callUsers.indexOf(userId);
+            if (index !== -1) callUsers.splice(index, 1);
+        });
+      
+
+        io.emit("call-users", { callUsers }); 
         [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
                 liveUsers.push(userId);
@@ -110,12 +128,20 @@ io.on("connection", (socket) => {
     socket.on("disconnect-call", ({ from, to, name, complain }) => {
         const targetSocketId = users[to];
         [from, to].forEach((userId) => {
+            const index = callUsers.indexOf(userId);
+            if (index !== -1) callUsers.splice(index, 1);
+        });
+        console.log("Users in call after disconnect-call:", callUsers);
+
+        io.emit("call-users", { callUsers }); 
+        [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
                 liveUsers.push(userId);
             }
         });
-        io.to(targetSocketId).emit("call-disconnect", {from, to, name, complain });
 
+        io.to(targetSocketId).emit("call-disconnect", { from, to, name, complain });
+        io.emit("live-users", { liveUsers });
     });
 
 });
