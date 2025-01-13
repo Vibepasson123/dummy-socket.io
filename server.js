@@ -106,7 +106,13 @@ io.on("connection", (socket) => {
                 liveUsers.splice(index, 1);
                 io.emit("live-users", { liveUsers });
             }
+            const index2 = callUsers.indexOf(disconnectedUserId);
+            if (index2 !== -1) {
+                callUsers.splice(index2, 1);
+                io.emit("call-users", { callUsers });
+            }
         }
+       
     });
     socket.on("in-call", ({ from, to }) => {
         [from, to].forEach((userId) => {
