@@ -34,9 +34,13 @@ io.on("connection", (socket) => {
         if (!liveUsers.includes(userId)) {
             liveUsers.push(userId);
         }
+        const index = callUsers.indexOf(userId);
+        if (index !== -1) {
+            callUsers.splice(index, 1);
+        }
         socket.emit("registered", { userId });
         io.emit("live-users", { liveUsers });
-        io.emit("call-users", { callUsers }); 
+        io.emit("call-users", { callUsers });
         socket.broadcast.emit("new-live-user", { userId });
     });
 
@@ -44,16 +48,23 @@ io.on("connection", (socket) => {
         const targetSocketId = users[to];
         if (targetSocketId) {
             io.to(targetSocketId).emit("incoming-call", { from, offer });
-            if (!callUsers.includes(from)) callUsers.push(from);
-            if (!callUsers.includes(to)) callUsers.push(to);
-
-            console.log("Users in call:", callUsers);
-            io.emit("call-users", { callUsers }); 
         } else {
-            socket.emit("user-not-found", { to });
+            const targetSocketId = users[from];
+            io.to(targetSocketId).emit("user-not-found", { to });
         }
     });
+    socket.on("start-in-call", (userId) => {
+        if (!callUsers.includes(userId)) callUsers.push(userId);
+        io.emit("call-users", { callUsers });
+    });
 
+    socket.on("remove-in-call", (userId) => {
+        const index = callUsers.indexOf(userId);
+        if (index !== -1) {
+            callUsers.splice(index, 1);
+        }
+        io.emit("call-users", { callUsers });
+    });
 
     socket.on("answer-call", ({ to, answer }) => {
         const targetSocketId = users[to];
@@ -79,7 +90,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
         let disconnectedUserId;
         for (const [userId, socketId] of Object.entries(users)) {
             if (socketId === socket.id) {
@@ -87,6 +97,7 @@ io.on("connection", (socket) => {
                 delete users[userId];
                 break;
             }
+            console.log("User disconnected:", userId);
         }
 
         if (disconnectedUserId) {
@@ -103,21 +114,10 @@ io.on("connection", (socket) => {
             if (liveIndex !== -1) liveUsers.splice(liveIndex, 1);
         });
         io.emit("live-users", { liveUsers });
-        if (callIndex !== -1) {
-            callUsers.splice(callIndex, 1);
-            console.log("Updated callUsers after disconnect:", callUsers);
-            io.emit("call-users", { callUsers });
-        }
     });
 
     socket.on("call-end", ({ from, to }) => {
-        [from, to].forEach((userId) => {
-            const index = callUsers.indexOf(userId);
-            if (index !== -1) callUsers.splice(index, 1);
-        });
-      
-
-        io.emit("call-users", { callUsers }); 
+        io.emit("call-users", { callUsers });
         [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
                 liveUsers.push(userId);
@@ -128,19 +128,12 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect-call", ({ from, to, name, complain }) => {
         const targetSocketId = users[to];
-        [from, to].forEach((userId) => {
-            const index = callUsers.indexOf(userId);
-            if (index !== -1) callUsers.splice(index, 1);
-        });
         console.log("Users in call after disconnect-call:", callUsers);
-
-        io.emit("call-users", { callUsers }); 
         [from, to].forEach((userId) => {
             if (!liveUsers.includes(userId)) {
                 liveUsers.push(userId);
             }
         });
-
         io.to(targetSocketId).emit("call-disconnect", { from, to, name, complain });
         io.emit("live-users", { liveUsers });
     });
