@@ -34,7 +34,7 @@ io.on("connection", (socket) => {
         if (!liveUsers.includes(userId)) {
             liveUsers.push(userId);
         }
-        const index = callUsers.indexOf(userId);
+        const index = callUsers.findIndex(id => id === userId);
         if (index !== -1) {
             callUsers.splice(index, 1);
         }
