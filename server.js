@@ -42,6 +42,7 @@ io.on("connection", (socket) => {
         io.emit("live-users", { liveUsers });
         io.emit("call-users", { callUsers });
         socket.broadcast.emit("new-live-user", { userId });
+        console.log(callUsers);
     });
 
     socket.on("call-user", ({ from, to, offer }) => {
@@ -112,7 +113,7 @@ io.on("connection", (socket) => {
                 io.emit("call-users", { callUsers });
             }
         }
-       
+
     });
     socket.on("in-call", ({ from, to }) => {
         [from, to].forEach((userId) => {
@@ -132,7 +133,7 @@ io.on("connection", (socket) => {
         io.emit("live-users", { liveUsers });
     });
 
-    socket.on("disconnect-call", ({ from, to, name, complain }) => {
+    socket.on("disconnect-call", ({ from, to, name, complain, block }) => {
         const targetSocketId = users[to];
         console.log("Users in call after disconnect-call:", callUsers);
         [from, to].forEach((userId) => {
@@ -140,7 +141,7 @@ io.on("connection", (socket) => {
                 liveUsers.push(userId);
             }
         });
-        io.to(targetSocketId).emit("call-disconnect", { from, to, name, complain });
+        io.to(targetSocketId).emit("call-disconnect", { from, to, name, complain, block });
         io.emit("live-users", { liveUsers });
     });
 
