@@ -74,6 +74,20 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("call-accepted", ({ from, to, offer }) => {
+        const targetSocketId = users[to];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("call-accepted", { from, offer });
+        }
+    });
+
+    socket.on("call-declined", ({ from, to, offer }) => {
+        const targetSocketId = users[to];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("call-declined", { from, offer });
+        }
+    });
+
     socket.on("ice-candidate", ({ to, candidate }) => {
         const targetSocketId = users[to];
         if (targetSocketId) {
